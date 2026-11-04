@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sombras da Mesa</title><style>*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#2a1a1a,#0c0809 70%);color:#e8dcc4;font-family:Georgia,'Times New Roman',serif;min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px;border-bottom:2px solid #5a3a1a;background:#140c0c}
+h1{margin:0;font-size:1.4rem;color:#d9a441;letter-spacing:1px}
+#goal{flex:1;margin:0;font-size:.8rem;opacity:.75;min-width:200px}
+button,select{font:inherit;background:#3a1f14;color:#f0d9a8;border:1px solid #8a5a2a;border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover:not(:disabled){background:#5a2f1c}button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:transparent}
+main{flex:1;display:grid;grid-template-columns:1fr 270px;gap:10px;padding:10px;min-height:0}
+#table{position:relative;min-height:min(60vh,500px);border-radius:50% / 42%;background:radial-gradient(ellipse,#2d4a2e 0%,#1b2d1c 60%,#0f1a10 100%);border:8px solid #4a2c12;box-shadow:inset 0 0 60px #000,0 0 30px #000a, 0 0 40px #d9a44122}
+#seats{position:absolute;inset:0}
+.seat{position:absolute;transform:translate(-50%,-50%);width:132px;padding:6px 8px;background:#1a0f0fdd;border:2px solid #6b4a24;border-radius:10px;text-align:center;font-size:.8rem;transition:.25s}
+.seat b{display:block;font-size:.9rem;color:#f0d9a8}
+.hp{color:#d33;letter-spacing:2px;font-size:1rem}.hp i{color:#444;font-style:normal}
+.seat.active{border-color:#ffd24a;box-shadow:0 0 16px #ffd24a;transform:translate(-50%,-50%) scale(1.07)}
+.seat.dead{filter:grayscale(1) brightness(.45);border-style:dashed}
+.seat.targetable{border-color:#4ad0ff;box-shadow:0 0 14px #4ad0ff;cursor:pointer;animation:pulse 1s infinite}
+.seat.chosen{border-color:#ff5a4a;box-shadow:0 0 18px #ff5a4a;animation:none}
+.seat.hit{animation:shake .5s,flashr .5s}.seat.healed{animation:flashg .7s}.seat.revived{animation:rise 1.1s}
+.trap{display:block;color:#c8a0ff;font-size:.72rem}
+@keyframes pulse{50%{box-shadow:0 0 4px #4ad0ff}}
+@keyframes shake{20%,60%{margin-left:-8px}40%,80%{margin-left:8px}}
+@keyframes flashr{50%{background:#a01010}}@keyframes flashg{50%{background:#1a7a3a}}
+@keyframes rise{0%{filter:brightness(4) blur(3px);transform:translate(-50%,-30%) scale(.7)}100%{filter:none}}
+#center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;width:44%;pointer-events:none}
+.pile{width:56px;height:78px;border-radius:6px;border:2px solid #8a5a2a;background:repeating-linear-gradient(45deg,#3a1414,#3a1414 6px,#2a0c0c 6px,#2a0c0c 12px);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.65rem;text-align:center;color:#f0d9a8}
+.pile big{font-size:1.2rem}
+#played{min-width:56px}
+#fx{width:100%;text-align:center;font-size:.85rem;color:#ffd98a;text-shadow:0 0 6px #000;min-height:2.4em}
+.card{width:112px;min-width:112px;height:158px;padding:6px;border-radius:9px;border:2px solid #8a5a2a;background:linear-gradient(160deg,#3b2a1a,#1c120b);display:flex;flex-direction:column;align-items:center;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative}
+.card .sym{font-size:2.1rem;margin:2px 0;width:62px;height:62px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:radial-gradient(circle,#ffffff22,#0006)}
+.card .nm{font-size:.74rem;font-weight:bold;color:#f4e2b5}.card .ct{font-size:.58rem;letter-spacing:1px;opacity:.7}.card .ds{font-size:.62rem;opacity:.85;margin-top:3px}
+.card:hover{transform:translateY(-8px) scale(1.08);z-index:2}
+.card.sel{transform:translateY(-14px) scale(1.1);box-shadow:0 0 18px #ffd24a;border-color:#ffd24a}
+.card.off{opacity:.45}.card.mini{width:56px;min-width:56px;height:78px;padding:2px;cursor:default}.card.mini .sym{width:34px;height:34px;font-size:1.3rem}.card.mini .nm{font-size:.5rem}.card.mini .ct,.card.mini .ds{display:none}
+.card.mini:hover{transform:none}
+.c-ATAQUE{border-color:#b33}.c-CURA{border-color:#3b8}.c-ARMADILHA{border-color:#a7c}.c-RESSURREIÇÃO{border-color:#6cf}
+#logPanel{background:#140c0cdd;border:2px solid #5a3a1a;border-radius:10px;padding:8px;display:flex;flex-direction:column;min-height:200px;max-height:70vh}
+#logPanel h3{margin:0 0 6px;color:#d9a441;font-size:.95rem}
+#log{margin:0;padding:0;list-style:none;overflow-y:auto;flex:1;font-size:.78rem}
+#log li{padding:2px 0;border-bottom:1px solid #ffffff10}
+.l-damage{color:#ff8a7a}.l-heal{color:#7affb0}.l-elim{color:#f55;font-weight:bold}.l-revive{color:#8fdcff;font-weight:bold}.l-trap{color:#caa0ff}.l-turn{color:#d9a441;margin-top:4px}.l-end{color:#ffd24a;font-weight:bold}.l-reshuffle{color:#aaa}
+footer{padding:8px 12px 12px;background:#140c0c;border-top:2px solid #5a3a1a}
+#handInfo{font-size:.8rem;margin-bottom:4px;opacity:.85}
+#hand{display:flex;gap:10px;overflow-x:auto;padding:16px 4px 6px;justify-content:center;min-height:185px}
+#actions{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:4px;flex-wrap:wrap}
+#hint{font-size:.85rem;color:#ffd98a}
+.overlay{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:10}
+.overlay.hidden{display:none}
+.box{background:#1b1010;border:3px solid #8a5a2a;border-radius:12px;padding:22px;width:min(92vw,360px);display:flex;flex-direction:column;gap:12px;text-align:center}
+.box h2{margin:0;color:#d9a441}.box p{margin:0}.box label{display:flex;justify-content:space-between;align-items:center;gap:10px}
+@media(max-width:800px){
+ main{grid-template-columns:1fr}#table{min-height:440px;border-radius:30px}
+ .seat{width:96px;font-size:.66rem;padding:3px 4px}.seat b{font-size:.75rem}.hp{font-size:.8rem}
+ #center{width:50%}.pile{width:44px;height:62px}#logPanel{max-height:150px;min-height:120px}
+ .card{width:92px;min-width:92px;height:140px}.card .ds{font-size:.55rem}#hand{justify-content:flex-start}
+}
+/* v2: arrastar cartas, contrapontos, vida 6 */
+.card{width:128px;min-width:128px;height:190px;touch-action:none;user-select:none;-webkit-user-select:none}
+.card .sym{width:46px;height:46px;font-size:1.6rem}
+.card .nm{font-size:.72rem}.card .ds{font-size:.6rem}
+.card .cs{font-size:.56rem;color:#ffb08a;margin-top:auto;padding-top:3px;border-top:1px dashed #ffffff30}
+.card.c-CAOS{border-color:#fa4}
+.card.dragging{opacity:.25}
+.card.ghost{position:fixed;z-index:30;pointer-events:none;transform:scale(1.12) rotate(-3deg);box-shadow:0 10px 30px #000;margin:0}
+.card.mini .cs{display:none}
+#hand{min-height:210px}
+#table.drop{box-shadow:inset 0 0 60px #000,0 0 30px #ffd24a88;border-color:#8a5a2a}
+#table.over{box-shadow:inset 0 0 90px #ffd24a66,0 0 50px #ffd24a;border-color:#ffd24a}
+.hp{font-size:.8rem;letter-spacing:0;display:block}
+@media(max-width:800px){.card{width:104px;min-width:104px;height:176px}.card .ds{font-size:.54rem}.card .cs{font-size:.5rem}.hp{font-size:.65rem}#hand{justify-content:center}}
+#table{min-height:min(52vh,440px)}#hand{min-height:200px;padding-top:12px}
+</style></head>
+<body>
+<div id="err" style="display:none;position:fixed;z-index:99;left:0;right:0;top:0;background:#900;color:#fff;padding:8px;font:13px monospace"></div>
+<script>window.onerror=function(m,u,l){var e=document.getElementById("err");e.style.display="block";e.textContent="Erro: "+m+" ("+String(u).split("/").pop()+":"+l+") — tente Ctrl+F5 e confirme que a pasta js/ está completa."}</script>
+<header>
+  <h1>☠ Sombras da Mesa</h1>
+  <p id="goal">Objetivo: seja o último vivo. Arraste uma carta para a mesa para jogá-la; todo efeito tem um contraponto! Os caídos podem ser ressuscitados!</p>
+  <div class="hbtns"><button id="btnSet" title="Configurações">⚙ Config.</button><button id="btnRestart" title="Reiniciar">↻ Reiniciar</button></div>
+</header>
+<main>
+  <section id="table">
+    <div id="seats"></div>
+    <div id="center">
+      <div class="pile" id="deckPile"></div>
+      <div class="pile" id="discPile"></div>
+      <div id="played"></div>
+      <div id="fx">A mesa aguarda...</div>
+    </div>
+  </section>
+  <aside id="logPanel"><h3>Crônica da Mesa</h3><ol id="log"></ol></aside>
+</main>
+<footer>
+  <div id="handInfo"></div>
+  <div id="hand"></div>
+  <div id="actions"><span id="hint"></span></div>
+</footer>
+<div id="menu" class="overlay"><div class="box">
+  <h2 id="menuTitle">Sombras da Mesa</h2>
+  <p id="menuMsg">Sobreviva. Elimine. Ressuscite (ou não).</p>
+  <label>Jogadores (você + bots)
+    <select id="selN"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+  <label>Dificuldade
+    <select id="selD"><option value="easy">Fácil</option><option value="normal" selected>Normal</option></select></label>
+  <label>Velocidade
+    <select id="selS"><option value="1.4">Lenta</option><option value="1" selected>Normal</option><option value="0.5">Rápida</option></select></label>
+  <button id="btnStart">Iniciar partida</button>
+  <button id="btnClose" class="ghost">Fechar</button>
+</div></div>
+<script>(function (G) {
+  G.CONFIG = { maxHp: 6, handSize: 2, trapLimit: 1, turnCap: 400,
+    names: ['Morgana', 'Valdric', 'Sylas', 'Isolde', 'Korvath'] };
+  G.createState = function (n, difficulty) {
+    const C = G.CONFIG, players = [];
+    for (let i = 0; i < n; i++)
+      players.push({ id: i, name: i === 0 ? 'Você' : C.names[i - 1], isBot: i > 0,
+        hp: C.maxHp, alive: true, hand: [], traps: [] });
+    const s = { players, deck: [], discard: [], current: 0, turn: 0, phase: 'start',
+      over: false, winner: null, difficulty: difficulty || 'normal',
+      lastPlayed: null, revivedNow: new Set() };
+    G.Deck.build(s);
+    players.forEach(p => G.Deck.draw(s, p.id, C.handSize, []));
+    return s;
+  };
+  G.alivePlayers = s => s.players.filter(p => p.alive);
+})(window.Game = window.Game || {});
+</script><script>(function (G) {
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  G.Deck = {
+    build(s) {
+      let uid = 0; s.deck = []; s.discard = [];
+      G.CARDS.forEach(c => { for (let i = 0; i < c.count; i++) s.deck.push({ uid: ++uid, id: c.id }); });
+      shuffle(s.deck);
+    },
+    // Compra até n cartas; recicla o descarte se necessário. Retorna quantas foram compradas.
+    draw(s, pid, n, ev) {
+      let got = 0;
+      for (let i = 0; i < n; i++) {
+        if (!s.deck.length) {
+          if (!s.discard.length) break;
+          s.deck = shuffle(s.discard); s.discard = [];
+          ev.push({ type: 'reshuffle', text: 'O descarte foi embaralhado e virou o novo baralho.' });
+        }
+        s.players[pid].hand.push(s.deck.pop()); got++;
+      }
+      return got;
+    },
+    discard(s, card) { s.discard.push(card); }
+  };
+})(window.Game);
+</script>
+<script>(function (G) {
+  // Toda carta: fx[0] = efeito principal, demais = contrapontos. Alvos são sempre sorteados.
+  // who: self | enemy | enemy2 (2 inimigos) | enemies (todos) | alive (qualquer vivo, inclusive você) | all (todos vivos) | dead
+  // op: dmg | heal | draw | discard | trap | revive      n: intensidade
+  const C = (id, cat, sym, name, count, desc, cons, fx) => ({ id, cat, sym, name, count, desc, cons, fx });
+  const e = (op, who, n) => ({ op, who, n });
+  G.CARDS = [
+    C('stab', 'ATAQUE', '🗡️', 'Golpe Sombrio', 4, '1 de dano em um inimigo.', 'Um vivo aleatório recupera 1.', [e('dmg', 'enemy', 1), e('heal', 'alive', 1)]),
+    C('axe', 'ATAQUE', '🪓', 'Machado Brutal', 3, '2 de dano em um inimigo.', 'Você sofre 1 de dano.', [e('dmg', 'enemy', 2), e('dmg', 'self', 1)]),
+    C('storm', 'ATAQUE', '🌩️', 'Tempestade', 2, '1 de dano em todos os inimigos.', 'Um inimigo aleatório recupera 2.', [e('dmg', 'enemies', 1), e('heal', 'enemy', 2)]),
+    C('arrow', 'ATAQUE', '🏹', 'Flecha Envenenada', 3, '2 de dano em um inimigo.', 'Um vivo aleatório compra 1 carta.', [e('dmg', 'enemy', 2), e('draw', 'alive', 1)]),
+    C('dual', 'ATAQUE', '⚔️', 'Golpe Duplo', 3, '1 de dano em dois inimigos.', 'Você descarta 1 carta aleatória.', [e('dmg', 'enemy2', 1), e('discard', 'self', 1)]),
+    C('blood', 'ATAQUE', '🩸', 'Sede de Sangue', 2, '3 de dano em um inimigo.', 'Você sofre 2 de dano.', [e('dmg', 'enemy', 3), e('dmg', 'self', 2)]),
+    C('bolt', 'ATAQUE', '⚡', 'Raio Caótico', 3, '2 de dano em um vivo (até você).', 'Um vivo aleatório recupera 2.', [e('dmg', 'alive', 2), e('heal', 'alive', 2)]),
+    C('heal', 'CURA', '💚', 'Recuperação', 4, 'Você recupera 2.', 'Um inimigo compra 1 carta.', [e('heal', 'self', 2), e('draw', 'enemy', 1)]),
+    C('heal3', 'CURA', '✨', 'Cura Avançada', 2, 'Você recupera 4.', 'Você descarta 1 carta aleatória.', [e('heal', 'self', 4), e('discard', 'self', 1)]),
+    C('bless', 'CURA', '🕯️', 'Bênção Sombria', 3, 'Você recupera 3.', 'Um vivo aleatório sofre 1 de dano.', [e('heal', 'self', 3), e('dmg', 'alive', 1)]),
+    C('font', 'CURA', '⛲', 'Fonte da Vida', 2, 'Um vivo aleatório recupera 3.', 'Você sofre 1 de dano.', [e('heal', 'alive', 3), e('dmg', 'self', 1)]),
+    C('feast', 'CURA', '🍖', 'Banquete Maldito', 2, 'Todos os vivos recuperam 1.', 'Um vivo aleatório sofre 2 de dano.', [e('heal', 'all', 1), e('dmg', 'alive', 2)]),
+    C('trap', 'ARMADILHA', '⛓️', 'Retaliação', 3, 'Arma: quem lhe causar dano recebe 1.', 'Você sofre 1 de dano.', [e('trap', 'self', 1), e('dmg', 'self', 1)]),
+    C('spike', 'ARMADILHA', '🦔', 'Espinhos Pesados', 2, 'Arma: quem lhe causar dano recebe 2.', 'Você descarta 1 carta aleatória.', [e('trap', 'self', 2), e('discard', 'self', 1)]),
+    C('snare', 'ARMADILHA', '🕸️', 'Laço Venenoso', 2, 'Arma: quem lhe causar dano recebe 1.', 'Um inimigo compra 1 carta.', [e('trap', 'self', 1), e('draw', 'enemy', 1)]),
+    C('rev1', 'RESSURREIÇÃO', '🪦', 'Retorno', 3, 'Ressuscita um eliminado com 2 de vida.', 'Você sofre 1 de dano.', [e('revive', 'dead', 2), e('dmg', 'self', 1)]),
+    C('rev2', 'RESSURREIÇÃO', '👼', 'Ressurreição Especial', 1, 'Ressuscita um eliminado com 4 de vida.', 'Você sofre 2 de dano.', [e('revive', 'dead', 4), e('dmg', 'self', 2)]),
+    C('ritual', 'RESSURREIÇÃO', '🔮', 'Ritual Profano', 2, 'Ressuscita um eliminado com 3 de vida.', 'Um vivo aleatório sofre 1 de dano.', [e('revive', 'dead', 3), e('dmg', 'alive', 1)]),
+    C('steal', 'CAOS', '🦇', 'Roubo Sombrio', 2, 'Um inimigo descarta 1 carta; você compra 1.', 'Você sofre 1 de dano.', [e('discard', 'enemy', 1), e('draw', 'self', 1), e('dmg', 'self', 1)]),
+    C('curse', 'CAOS', '☠️', 'Maldição', 2, '1 de dano e 1 descarte em um inimigo.', 'Um vivo aleatório compra 1 carta.', [e('dmg', 'enemy', 1), e('discard', 'enemy', 1), e('draw', 'alive', 1)]),
+    C('pact', 'CAOS', '📜', 'Pacto Sombrio', 2, 'Todos os inimigos descartam 1 carta.', 'Você sofre 1 de dano.', [e('discard', 'enemies', 1), e('dmg', 'self', 1)])
+  ];
+  G.DEF = {}; G.CARDS.forEach(c => G.DEF[c.id] = c);
+  const rnd = a => a[Math.floor(Math.random() * a.length)];
+
+  G.cands = (s, pid, who) => {
+    const A = s.players.filter(p => p.alive);
+    switch (who) {
+      case 'self': return A.some(p => p.id === pid) ? [pid] : [];
+      case 'enemy': case 'enemy2': case 'enemies': return A.filter(p => p.id !== pid).map(p => p.id);
+      case 'alive': case 'all': return A.map(p => p.id);
+      case 'dead': return s.players.filter(p => !p.alive && !s.revivedNow.has(p.id)).map(p => p.id);
+    }
+    return [];
+  };
+  G.pick = (s, pid, who) => {
+    const c = G.cands(s, pid, who);
+    if (who === 'enemies' || who === 'all' || who === 'self') return c;
+    if (who === 'enemy2') return c.sort(() => Math.random() - .5).slice(0, 2);
+    return c.length ? [rnd(c)] : [];
+  };
+  G.trapPower = card => G.DEF[card.id].fx.find(f => f.op === 'trap').n;
+
+  // Jogável se o efeito principal tiver algum alvo possível.
+  G.canPlay = (s, pid, def) => {
+    const me = s.players[pid], f = def.fx[0];
+    if (!me.alive) return false;
+    if (f.op === 'trap' && me.traps.length >= G.CONFIG.trapLimit) return false;
+    return G.cands(s, pid, f.who).length > 0;
+  };
+  G.legalPlays = (s, pid) => s.players[pid].hand.filter(c => G.canPlay(s, pid, G.DEF[c.id])).map(card => ({ card, def: G.DEF[card.id] }));
+  G.whyNot = (s, pid, def) => def.fx[0].op === 'trap' ? 'Você já tem uma armadilha ativa.' : def.fx[0].op === 'revive' ? 'Não há ninguém eliminado para ressuscitar.' : 'Sem alvo válido para esta carta.';
+
+  function eliminate(s, id, ev) {
+    const t = s.players[id];
+    if (!t.alive) return;
+    t.alive = false; t.hp = 0;
+    t.hand.forEach(c => G.Deck.discard(s, c)); t.hand = [];
+    t.traps.forEach(c => G.Deck.discard(s, c)); t.traps = [];
+    ev.push({ type: 'elim', pid: id, text: `☠ ${t.name} foi eliminado!` });
+  }
+  function damage(s, src, tgt, amt, ev) {
+    const t = s.players[tgt];
+    if (!t.alive) return;
+    t.hp = Math.max(0, t.hp - amt);
+    ev.push({ type: 'damage', pid: tgt, src, amount: amt, text: src === tgt ? `${t.name} sofre ${amt} de dano.` : `${s.players[src].name} causa ${amt} de dano a ${t.name}.` });
+    const trap = (t.traps.length && src !== tgt) ? t.traps.shift() : null;
+    if (t.hp <= 0) eliminate(s, tgt, ev);
+    if (trap) {
+      G.Deck.discard(s, trap);
+      ev.push({ type: 'trap', pid: tgt, text: `⛓ A armadilha de ${t.name} dispara contra ${s.players[src].name}!` });
+      if (s.players[src].alive) damage(s, tgt, src, G.trapPower(trap), ev);
+    }
+  }
+  function apply(s, pid, f, card, ev) {
+    const P = s.players;
+    G.pick(s, pid, f.who).forEach(id => {
+      const t = P[id];
+      if (f.op === 'revive') { if (t.alive || s.revivedNow.has(id)) return; }
+      else if (!t.alive || !P[pid].alive && f.who !== 'self' && false) return;
+      switch (f.op) {
+        case 'dmg': if (P[pid].alive || id === pid) damage(s, pid, id, f.n, ev); break;
+        case 'heal': { const b = t.hp; t.hp = Math.min(G.CONFIG.maxHp, t.hp + f.n); ev.push({ type: 'heal', pid: id, text: t.hp > b ? `${t.name} recupera ${t.hp - b} de vida.` : `${t.name} já está com a vida cheia.` }); break; }
+        case 'draw': { const n = G.Deck.draw(s, id, f.n, ev); ev.push({ type: 'log', text: `${t.name} compra ${n} carta(s).` }); break; }
+        case 'discard': for (let i = 0; i < f.n && t.hand.length; i++) { const c = t.hand.splice(Math.floor(Math.random() * t.hand.length), 1)[0]; G.Deck.discard(s, c); ev.push({ type: 'log', text: `${t.name} descarta ${G.DEF[c.id].name}.` }); } break;
+        case 'trap': t.traps.push(card); ev.push({ type: 'log', text: `${t.name} arma uma armadilha.` }); break;
+        case 'revive':
+          s.revivedNow.add(id); t.alive = true; t.hp = f.n;
+          G.Deck.draw(s, id, G.CONFIG.handSize, ev);
+          ev.push({ type: 'revive', pid: id, text: `✦ ${t.name} retorna dos mortos com ${t.hp} de vida!` }); break;
+      }
+    });
+  }
+  // Resolve todos os efeitos (principal + contrapontos). Não verifica vitória.
+  G.resolve = (s, pid, card) => {
+    const ev = [];
+    G.DEF[card.id].fx.forEach((f, i) => { if (i === 0) ev.push({ type: 'log', text: '▸ ' + G.DEF[card.id].desc }); else if (i === 1) ev.push({ type: 'log', text: '⚖ Contraponto: ' + G.DEF[card.id].cons }); apply(s, pid, f, card, ev); });
+    return ev;
+  };
+})(window.Game);
+</script><script>(function (G) {
+  function advance(s) {
+    const n = s.players.length;
+    for (let k = 1; k <= n; k++) {
+      const p = s.players[(s.current + k) % n];
+      if (p.alive) { s.current = p.id; return; }
+    }
+  }
+  function finish(s, ev) {
+    const alive = G.alivePlayers(s);
+    if (alive.length <= 1) {
+      s.over = true; s.winner = alive.length ? alive[0].id : null;
+      ev.push({ type: 'end', text: s.winner === null ? 'Todos caíram: empate!' : `🏆 ${alive[0].name} é o último vivo!` });
+    } else if (s.turn >= G.CONFIG.turnCap) {
+      s.over = true; s.winner = null;
+      ev.push({ type: 'end', text: 'Limite de turnos atingido: empate!' });
+    } else advance(s);
+    s.phase = 'start';
+    return { ok: true, events: ev };
+  }
+  G.TM = {
+    beginTurn(s) {
+      if (s.over || s.phase !== 'start') return null;
+      s.phase = 'play'; s.turn++;
+      const p = s.players[s.current];
+      const ev = [{ type: 'turn', pid: p.id, text: `— Turno de ${p.name} —` }];
+      const n = G.Deck.draw(s, p.id, 1, ev);
+      ev.push({ type: 'log', text: n ? `${p.name} compra uma carta.` : 'Não há cartas para comprar.' });
+      return ev;
+    },
+    play(s, pid, uid) {
+      if (s.over || s.phase !== 'play' || s.current !== pid) return { ok: false, error: 'Ação inválida.' };
+      const p = s.players[pid], i = p.hand.findIndex(c => c.uid === uid);
+      if (i < 0) return { ok: false, error: 'Carta inexistente.' };
+      const def = G.DEF[p.hand[i].id];
+      if (!G.canPlay(s, pid, def)) return { ok: false, error: G.whyNot(s, pid, def) };
+      const [card] = p.hand.splice(i, 1);
+      s.revivedNow.clear();
+      if (def.fx[0].op !== 'trap') G.Deck.discard(s, card);
+      s.lastPlayed = { pid, id: def.id };
+      const ev = [{ type: 'play', pid, card: def.id, text: `${p.name} usa ${def.name}.` }];
+      ev.push(...G.resolve(s, pid, card));
+      return finish(s, ev);
+    },
+    // Sem jogada legal: descarta uma carta (ou apenas passa se a mão estiver vazia).
+    forced(s, pid) {
+      const p = s.players[pid], ev = [];
+      if (p.hand.length) {
+        const c = p.hand.shift(); G.Deck.discard(s, c);
+        ev.push({ type: 'log', text: `${p.name} não tem jogada válida e descarta ${G.DEF[c.id].name}.` });
+      } else ev.push({ type: 'log', text: `${p.name} não tem cartas e perde a vez.` });
+      return finish(s, ev);
+    }
+  };
+})(window.Game);
+</script>
+<script>(function (G) {
+  // Valor esperado de um efeito sobre um candidato (positivo = bom para o bot).
+  function val(s, me, f, id) {
+    const t = s.players[id], self = id === me.id, n = f.n, max = G.CONFIG.maxHp;
+    switch (f.op) {
+      case 'dmg': {
+        if (self) return t.hp <= n ? -3000 : -14 * n - (t.hp - n <= 2 ? 20 : 0);
+        let v = t.hp <= n ? 60 + (G.alivePlayers(s).length === 2 ? 1000 : 0) : 10 * n + (max + 1 - t.hp) * 2;
+        if (t.traps.length) { const tp = G.trapPower(t.traps[0]); v -= tp >= me.hp ? 3000 : tp * 10; }
+        return v;
+      }
+      case 'heal': { const need = Math.min(n, max - t.hp); return self ? (need ? need * 14 + (t.hp <= 2 ? 30 : 0) : -40) : -need * 10; }
+      case 'draw': return (self ? 8 : -8) * n;
+      case 'discard': { const c = Math.min(n, t.hand.length); return (self ? -9 : 9) * c; }
+      case 'trap': return 14 + (me.hp <= 3 ? 8 : 0);
+      case 'revive': return -3 - 2 * n;
+    }
+    return 0;
+  }
+  function ev(s, me, f) {
+    const c = G.cands(s, me.id, f.who);
+    if (!c.length) return 0;
+    const sum = c.reduce((a, id) => a + val(s, me, f, id), 0);
+    if (f.who === 'enemies' || f.who === 'all') return sum;
+    return sum / c.length * (f.who === 'enemy2' ? Math.min(2, c.length) : 1);
+  }
+  G.BotAI = {
+    choose(s, pid) {
+      const opts = G.legalPlays(s, pid);
+      if (!opts.length) return null;
+      const me = s.players[pid], easy = s.difficulty === 'easy';
+      if (easy && Math.random() < 0.4) return { uid: opts[Math.floor(Math.random() * opts.length)].card.uid };
+      let best = -Infinity, pick = opts[0];
+      opts.forEach(o => {
+        const v = o.def.fx.reduce((a, f) => a + ev(s, me, f), 0) + (Math.random() * (easy ? 60 : 4) - (easy ? 30 : 2));
+        if (v > best) { best = v; pick = o; }
+      });
+      return { uid: pick.card.uid };
+    }
+  };
+})(window.Game);
+</script><script>(function (G) {
+  const $ = id => document.getElementById(id);
+  const UI = G.UI = { s: null, speed: 1, awaiting: false, resolveHuman: null };
+  UI.sleep = ms => new Promise(r => setTimeout(r, ms * UI.speed));
+
+  UI.init = function (h) {
+    const read = () => { UI.speed = +$('selS').value; h.onStart(+$('selN').value, $('selD').value); };
+    $('btnStart').onclick = () => { UI.hideMenu(); read(); };
+    $('btnRestart').onclick = read;
+    $('btnSet').onclick = () => UI.showMenu('Configurações', 'Iniciar uma nova partida aplica as opções.', !!UI.s && !UI.s.over);
+    $('btnClose').onclick = UI.hideMenu;
+    bindDrag();
+    UI.showMenu('Sombras da Mesa', 'Arraste cartas para a mesa. Todo poder tem um preço.', false);
+  };
+  UI.showMenu = (t, m, c) => { $('menuTitle').textContent = t; $('menuMsg').textContent = m; $('btnClose').style.display = c ? '' : 'none'; $('menu').classList.remove('hidden'); };
+  UI.hideMenu = () => $('menu').classList.add('hidden');
+  UI.hint = t => $('hint').textContent = t;
+  UI.reset = () => { $('log').innerHTML = ''; UI.awaiting = false; $('fx').textContent = 'A mesa aguarda...'; UI.hint(''); };
+  UI.log = (text, cls) => { const li = document.createElement('li'); li.textContent = text; li.className = 'l-' + (cls || ''); const l = $('log'); l.appendChild(li); l.scrollTop = l.scrollHeight; };
+
+  function cardHtml(c, extra) {
+    const d = G.DEF[c.id];
+    return `<div class="card c-${d.cat} ${extra || ''}" data-uid="${c.uid}"><span class="ct">${d.cat}</span><span class="sym">${d.sym}</span><span class="nm">${d.name}</span><span class="ds">${d.desc}</span><span class="cs">⚖ ${d.cons}</span></div>`;
+  }
+
+  UI.render = function (s) {
+    UI.s = s;
+    const n = s.players.length, M = G.CONFIG.maxHp;
+    $('seats').innerHTML = s.players.map((p, i) => {
+      const a = (90 + i * 360 / n) * Math.PI / 180;
+      const x = 50 + 41 * Math.cos(a), y = 50 + 40 * Math.sin(a);
+      const cls = 'seat' + (p.alive ? '' : ' dead') + (s.current === p.id && p.alive && !s.over ? ' active' : '');
+      return `<div class="${cls}" data-id="${p.id}" style="left:${x}%;top:${y}%"><b>${p.name}${p.isBot ? '' : ' ★'}</b>` +
+        (p.alive ? `<span class="hp">${'♥'.repeat(p.hp)}<i>${'♥'.repeat(M - p.hp)}</i></span>${p.hp}/${M} · 🂠 ${p.hand.length}` : '☠ Eliminado') +
+        p.traps.map(t => `<span class="trap">⛓ ${G.DEF[t.id].name}</span>`).join('') + '</div>';
+    }).join('');
+    $('deckPile').innerHTML = `<big>🂠</big>Baralho<br>${s.deck.length}`;
+    const top = s.discard[s.discard.length - 1];
+    $('discPile').innerHTML = `<big>${top ? G.DEF[top.id].sym : '—'}</big>Descarte<br>${s.discard.length}`;
+    $('played').innerHTML = s.lastPlayed ? cardHtml({ uid: 0, id: s.lastPlayed.id }, 'mini') : '';
+    const me = s.players[0];
+    $('handInfo').textContent = me.alive ? `Sua mão: ${me.hp}/${M} de vida · ${me.hand.length} carta(s)` : '☠ Você foi eliminado. Alguém pode ressuscitá-lo...';
+    const legal = UI.awaiting ? new Set(G.legalPlays(s, 0).map(o => o.card.uid)) : null;
+    $('hand').innerHTML = me.hand.map(c => cardHtml(c, legal && !legal.has(c.uid) ? 'off' : '')).join('');
+  };
+
+  UI.tryPlay = function (uid) {
+    if (!UI.awaiting) return;
+    const c = UI.s.players[0].hand.find(x => x.uid === uid); if (!c) return;
+    if (!G.canPlay(UI.s, 0, G.DEF[c.id])) { UI.hint('⚠ ' + G.whyNot(UI.s, 0, G.DEF[c.id])); return; }
+    UI.awaiting = false; UI.hint(''); UI.resolveHuman(uid);
+  };
+  UI.waitHuman = function (s) {
+    UI.awaiting = true; UI.hint('Sua vez: arraste uma carta para a mesa.'); UI.render(s);
+    return new Promise(r => UI.resolveHuman = r);
+  };
+
+  function inside(e, el) { const r = el.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; }
+  function bindDrag() {
+    const hand = $('hand'), tbl = $('table');
+    hand.addEventListener('pointerdown', e => {
+      const el = e.target.closest('.card'); if (!el || !UI.awaiting) return;
+      const uid = +el.dataset.uid, r = el.getBoundingClientRect(), sx = e.clientX, sy = e.clientY; let ghost = null;
+      const end = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', cancel); if (ghost) ghost.remove(); el.classList.remove('dragging'); tbl.classList.remove('drop', 'over'); };
+      const move = ev => {
+        if (!ghost && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 6) {
+          ghost = el.cloneNode(true); ghost.classList.add('ghost'); ghost.style.width = r.width + 'px'; ghost.style.height = r.height + 'px';
+          document.body.appendChild(ghost); el.classList.add('dragging'); tbl.classList.add('drop');
+        }
+        if (ghost) { ghost.style.left = ev.clientX - r.width / 2 + 'px'; ghost.style.top = ev.clientY - r.height / 2 + 'px'; tbl.classList.toggle('over', inside(ev, tbl)); }
+      };
+      const up = ev => { const drop = ghost && inside(ev, tbl); end(); if (drop) UI.tryPlay(uid); };
+      const cancel = () => end();
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', cancel);
+    });
+    hand.addEventListener('dblclick', e => { const el = e.target.closest('.card'); if (el) UI.tryPlay(+el.dataset.uid); });
+  }
+
+  function flash(pid, cls) {
+    const el = document.querySelector(`.seat[data-id="${pid}"]`); if (!el) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  }
+  UI.events = async function (ev, isStale) {
+    for (const e of ev) {
+      if (!e.text) continue;
+      UI.log(e.text, e.type);
+      if (['play', 'turn', 'elim', 'revive', 'trap', 'end'].includes(e.type)) $('fx').textContent = e.text;
+      if (e.type === 'damage') flash(e.pid, 'hit');
+      if (e.type === 'heal') flash(e.pid, 'healed');
+      if (e.type === 'revive') flash(e.pid, 'revived');
+      const w = { damage: 450, heal: 400, revive: 800, elim: 600, play: 500, trap: 450, end: 300 }[e.type];
+      if (w) { await UI.sleep(w); if (isStale()) return; }
+    }
+  };
+  UI.gameOver = s => UI.showMenu(s.winner === null ? 'Empate' : (s.winner === 0 ? 'Vitória!' : 'Derrota'),
+    s.winner === null ? 'Ninguém sobreviveu.' : `${s.players[s.winner].name} é o último vivo na mesa.`, false);
+})(window.Game);
+</script><script>(function (G) {
+  let state = null, runId = 0;
+  async function loop(id) {
+    const U = G.UI, stale = () => id !== runId;
+    while (!stale() && !state.over) {
+      const s = state, p = s.players[s.current];
+      const ev = G.TM.beginTurn(s);
+      if (!ev) return;
+      U.render(s); await U.events(ev, stale); if (stale()) return;
+      let res;
+      const legal = G.legalPlays(s, p.id);
+      if (!legal.length) { await U.sleep(400); if (stale()) return; res = G.TM.forced(s, p.id); }
+      else if (p.isBot) {
+        await U.sleep(700); if (stale()) return;
+        const ch = G.BotAI.choose(s, p.id);
+        res = G.TM.play(s, p.id, ch.uid);
+        if (!res.ok) res = G.TM.play(s, p.id, legal[0].card.uid);
+      } else {
+        const uid = await U.waitHuman(s); if (stale()) return;
+        res = G.TM.play(s, p.id, uid);
+        if (!res.ok) { U.log(res.error); res = G.TM.forced(s, p.id); }
+      }
+      U.render(s); await U.events(res.events, stale); if (stale()) return;
+      U.render(s);
+    }
+    if (!stale() && state.over) U.gameOver(state);
+  }
+  function start(n, diff) {
+    runId++; state = G.createState(n, diff);
+    G.UI.reset(); G.UI.render(state);
+    G.UI.log(`Partida iniciada: ${n} jogadores (${diff === 'easy' ? 'Fácil' : 'Normal'}).`, 'turn');
+    loop(runId);
+  }
+  window.addEventListener('DOMContentLoaded', () => G.UI.init({ onStart: start }));
+  window.addEventListener('resize', () => state && G.UI.render(state));
+})(window.Game);
+</script>
+</body></html>

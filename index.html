@@ -464,7 +464,8 @@ footer{position:relative;z-index:2;padding:6px 14px 14px;background:linear-gradi
     bindDrag();
     UI.showMenu('Sombras da Mesa', 'Arraste cartas para a mesa. Todo poder tem um preço.', false);
   };
-  UI.showMenu = (t, m, c) => { $('menuTitle').textContent = t; $('menuMsg').textContent = m; $('btnClose').style.display = c ? '' : 'none'; $('menu').classList.remove('hidden'); };
+  //UI.showMenu = (t, m, c) => { $('menuTitle').textContent = t; $('menuMsg').textContent = m; $('btnClose').style.display = c ? '' : 'none'; $('menu').classList.remove('hidden'); };
+  UI.showMenu = (t, m, c) => { const title = $('menuTitle'); const msg = $('menuMsg'); const close = $('btnClose'); const menu = $('menu'); if (!title || !msg || !menu) { console.error('Erro: elementos do menu não encontrados.'); return; } title.textContent = t; msg.textContent = m; if (close) {close.style.display = c ? '' : 'none';} menu.classList.remove('hidden');};
   UI.hideMenu = () => $('menu').classList.add('hidden');
   UI.hint = t => $('hint').textContent = t;
   UI.reset = () => { document.querySelectorAll('.rv,.fnum,.ghost').forEach(e => e.remove()); $('log').innerHTML = ''; UI.awaiting = false; $('fx').textContent = 'A mesa aguarda...'; UI.hint(''); };
